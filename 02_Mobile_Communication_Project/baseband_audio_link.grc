@@ -1,0 +1,174 @@
+options:
+  parameters:
+    author: Nguyen Huynh Van Phuong
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: Baseband Audio Streaming with PCM Framing (PRJ-MCOM GATE-2)
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: no_gui
+    hier_block_src_path: '.:'
+    id: baseband_audio_link
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: run
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: 'PRJ-MCOM GATE-2: Baseband Audio Link'
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: samp_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: '48000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [200, 12]
+    rotation: 0
+    state: enabled
+- name: blocks_wavfile_sink_0
+  id: blocks_wavfile_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    append: 'False'
+    bits_per_sample1: FORMAT_PCM_16
+    bits_per_sample2: FORMAT_PCM_16
+    bits_per_sample3: FORMAT_VORBIS
+    bits_per_sample4: FORMAT_PCM_16
+    comment: ''
+    file: rx_audio_48k.wav
+    format: FORMAT_WAV
+    nchan: '1'
+    samp_rate: samp_rate
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [832, 164]
+    rotation: 0
+    state: enabled
+- name: blocks_wavfile_source_0
+  id: blocks_wavfile_source
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    file: test_audio_48k.wav
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    nchan: '1'
+    repeat: 'False'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [64, 180]
+    rotation: 0
+    state: enabled
+- name: epy_block_depacketizer
+  id: epy_block
+  parameters:
+    _source_code: "import numpy as np\nimport struct\nfrom gnuradio import gr\n\n\
+      PREAMBLE = bytes([0xAC, 0x62, 0xAC, 0x62])\n\nclass blk(gr.basic_block):\n \
+      \   def __init__(self, frame_samples=48):\n        gr.basic_block.__init__(self,\
+      \ name='pcm_depacketizer', in_sig=[np.uint8], out_sig=[np.float32])\n      \
+      \  self.frame_samples = frame_samples\n        self.last_seq = -1\n        self.total_lost\
+      \ = 0\n        self.set_output_multiple(48)\n    def forecast(self, noutput_items,\
+      \ ninputs):\n        n_pkts = (noutput_items + 47) // 48\n        return [n_pkts\
+      \ * 104]\n    def general_work(self, input_items, output_items):\n        in0\
+      \ = input_items[0]\n        out0 = output_items[0]\n        n_in = len(in0)\n\
+      \        n_out = len(out0)\n        if n_in < 104:\n            return 0\n \
+      \       pos = bytes(in0[:min(n_in, 2048)]).find(PREAMBLE)\n        if pos ==\
+      \ -1:\n            self.consume(0, max(1, min(n_in, 2048) - 3))\n          \
+      \  return 0\n        if pos > 0:\n            self.consume(0, pos)\n       \
+      \     return 0\n        n_pkts = min(n_in // 104, n_out // 48)\n        if n_pkts\
+      \ == 0:\n            return 0\n        valid = 0\n        for i in range(n_pkts):\n\
+      \            off_in = i * 104\n            if bytes(in0[off_in:off_in+4]) !=\
+      \ PREAMBLE:\n                break\n            seq_num, plen = struct.unpack('<HH',\
+      \ bytes(in0[off_in+4:off_in+8]))\n            if plen != 96:\n             \
+      \   break\n            pcm = in0[off_in+8:off_in+104].tobytes()\n          \
+      \  out0[valid*48:(valid+1)*48] = np.frombuffer(pcm, dtype=np.int16).astype(np.float32)\
+      \ / 32767.0\n            valid += 1\n            if self.last_seq >= 0:\n  \
+      \              exp = (self.last_seq + 1) & 0xFFFF\n                if seq_num\
+      \ != exp:\n                    self.total_lost += (seq_num - exp) & 0xFFFF\n\
+      \            self.last_seq = seq_num\n        if valid > 0:\n            self.consume(0,\
+      \ valid * 104)\n            return valid * 48\n        self.consume(0, 1)\n\
+      \        return 0\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    frame_samples: '48'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    _io_cache: ('pcm_depacketizer', 'blk', [('frame_samples', '48')], [('0', 'byte',
+      1)], [('0', 'float', 1)], '', ['frame_samples'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [576, 180]
+    rotation: 0
+    state: enabled
+- name: epy_block_packetizer
+  id: epy_block
+  parameters:
+    _source_code: "import numpy as np\nimport struct\nfrom gnuradio import gr\n\n\
+      PREAMBLE = bytes([0xAC, 0x62, 0xAC, 0x62])\n\nclass blk(gr.basic_block):\n \
+      \   def __init__(self, frame_samples=48):\n        gr.basic_block.__init__(self,\
+      \ name='pcm_packetizer', in_sig=[np.float32], out_sig=[np.uint8])\n        self.frame_samples\
+      \ = frame_samples\n        self.seq_num = 0\n        self.set_output_multiple(104)\n\
+      \    def forecast(self, noutput_items, ninputs):\n        n_pkts = (noutput_items\
+      \ + 103) // 104\n        return [n_pkts * self.frame_samples]\n    def general_work(self,\
+      \ input_items, output_items):\n        in0 = input_items[0]\n        out0 =\
+      \ output_items[0]\n        n_pkts = min(len(in0) // self.frame_samples, len(out0)\
+      \ // 104)\n        if n_pkts == 0:\n            return 0\n        for i in range(n_pkts):\n\
+      \            s_in = in0[i*48:(i+1)*48]\n            s_int16 = np.clip(s_in *\
+      \ 32767.0, -32768, 32767).astype(np.int16)\n            pcm_bytes = s_int16.tobytes()\n\
+      \            header = PREAMBLE + struct.pack('<HH', self.seq_num & 0xFFFF, len(pcm_bytes))\n\
+      \            out0[i*104:(i+1)*104] = np.frombuffer(header + pcm_bytes, dtype=np.uint8)\n\
+      \            self.seq_num = (self.seq_num + 1) & 0xFFFF\n        self.consume(0,\
+      \ n_pkts * 48)\n        return n_pkts * 104\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    frame_samples: '48'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    _io_cache: ('pcm_packetizer', 'blk', [('frame_samples', '48')], [('0', 'float',
+      1)], [('0', 'byte', 1)], '', ['frame_samples'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [320, 180]
+    rotation: 0
+    state: enabled
+
+connections:
+- [blocks_wavfile_source_0, '0', epy_block_packetizer, '0']
+- [epy_block_depacketizer, '0', blocks_wavfile_sink_0, '0']
+- [epy_block_packetizer, '0', epy_block_depacketizer, '0']
+
+metadata:
+  file_format: 1
+  grc_version: 3.10.12.0
