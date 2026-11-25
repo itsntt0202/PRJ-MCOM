@@ -306,7 +306,7 @@ class QPSK(gr.top_block, Qt.QWidget):
         ##################################################
         self.connect((self.analog_agc_xx_0, 0), (self.root_raised_cosine_filter_1, 0))
         self.connect((self.analog_noise_source_x_0, 0), (self.blocks_add_xx_0, 1))
-        self.connect((self.blocks_add_xx_0, 0), (self.channels_selective_fading_model_0, 0))
+        self.connect((self.blocks_add_xx_0, 0), (self.analog_agc_xx_0, 0))
         self.connect((self.blocks_add_xx_0, 0), (self.qtgui_freq_sink_x_0, 0))
         self.connect((self.blocks_char_to_float_0, 0), (self.audio_sink_0, 0))
         self.connect((self.blocks_char_to_float_0, 0), (self.qtgui_time_sink_x_0, 0))
@@ -315,7 +315,7 @@ class QPSK(gr.top_block, Qt.QWidget):
         self.connect((self.blocks_packed_to_unpacked_xx_0, 0), (self.digital_diff_encoder_bb_0, 0))
         self.connect((self.blocks_unpacked_to_packed_xx_0, 0), (self.blocks_char_to_float_0, 0))
         self.connect((self.blocks_wavfile_source_0, 0), (self.blocks_multiply_const_vxx_0, 0))
-        self.connect((self.channels_selective_fading_model_0, 0), (self.analog_agc_xx_0, 0))
+        self.connect((self.channels_selective_fading_model_0, 0), (self.blocks_add_xx_0, 0))
         self.connect((self.digital_chunks_to_symbols_xx_0, 0), (self.root_raised_cosine_filter_0, 0))
         self.connect((self.digital_constellation_decoder_cb_0, 0), (self.digital_diff_decoder_bb_0, 0))
         self.connect((self.digital_costas_loop_cc_0, 0), (self.digital_constellation_decoder_cb_0, 0))
@@ -324,7 +324,7 @@ class QPSK(gr.top_block, Qt.QWidget):
         self.connect((self.digital_diff_encoder_bb_0, 0), (self.digital_chunks_to_symbols_xx_0, 0))
         self.connect((self.digital_linear_equalizer_0, 0), (self.digital_costas_loop_cc_0, 0))
         self.connect((self.digital_symbol_sync_xx_0, 0), (self.digital_linear_equalizer_0, 0))
-        self.connect((self.root_raised_cosine_filter_0, 0), (self.blocks_add_xx_0, 0))
+        self.connect((self.root_raised_cosine_filter_0, 0), (self.channels_selective_fading_model_0, 0))
         self.connect((self.root_raised_cosine_filter_0, 0), (self.qtgui_freq_sink_x_1, 0))
         self.connect((self.root_raised_cosine_filter_1, 0), (self.digital_symbol_sync_xx_0, 0))
 
