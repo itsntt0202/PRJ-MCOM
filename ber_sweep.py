@@ -72,6 +72,7 @@ def simulate_qpsk_ber(eb_n0_db, num_bits=500000):
 if __name__ == '__main__':
     print("==========================================================================")
     print("  PRJ-MCOM GATE-3: AUTOMATED QPSK BER SWEEP TESTBED (AWGN CHANNEL)       ")
+    print("  Author: Thuy Tien | Mobile Communications (61ECE314, VGU)             ")
     print("==========================================================================")
 
     # Sweep parameters: Eb/N0 from 0 to 10 dB in 2 dB steps
