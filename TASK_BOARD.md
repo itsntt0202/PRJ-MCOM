@@ -12,8 +12,8 @@
 | :--- | :---: | :--- | :--- |
 | **MCOM-01** | GATE-1 | Project Registration & Specification | `[PASS]` Completed |
 | **MCOM-02** | GATE-2 | Baseband Audio Framing & Smoke Test (`pcm_framing.py`, `baseband_audio_link.grc`) | `[PASS]` Completed |
-| **MCOM-03** | GATE-3 | Digital Modem Transceiver, FEC & Synchronization (`rf_qpsk_link.grc/.py`) | `[TODO]` Fixes Required |
-| **MCOM-04** | GATE-3 | Automated Headless BER Sweep Testbed (`ber_sweep.py`, `awgn_ber_qpsk.*`) | `[TODO]` Fixes Required |
+| **MCOM-03** | GATE-3 | Digital Modem Transceiver, FEC & Synchronization (`rf_qpsk_link.grc/.py`) | `[IN PROGRESS]` (~80% — FEC Remaining) |
+| **MCOM-04** | GATE-3 | Automated Headless BER Sweep Testbed (`ber_sweep.py`, `awgn_ber_qpsk.*`) | `[IN PROGRESS]` (~50% — GNU Radio + FEC Sweep Remaining) |
 
 ---
 
@@ -28,22 +28,20 @@
 ## MCOM-03: Digital Modem Transceiver & Synchronization (GATE-3)
 
 ### Completed `[PASS]`
-- [x] `QPSK.grc` compiles cleanly via `C:\ProgramData\radioconda\Scripts\grcc.exe` (GNU Radio 3.10.12.0).
-- [x] Core modulation and sync blocks present: `digital.constellation_qpsk()`, RRC filters (`sps=4`, `alpha=0.35`, `ntaps=45`), `digital.symbol_sync_cc` (`TED_GARDNER`, `IR_MMSE_8TAP`), `digital.costas_loop_cc` (order 4).
-- [x] Channel ordering fixed in `QPSK.grc` (`RRC Tx -> Fading -> AWGN -> AGC`).
+- [x] **Deliverable Naming & Compilation**: Created `rf_qpsk_link.grc` and compiled `rf_qpsk_link.py` cleanly via `C:\ProgramData\radioconda\Scripts\grcc.exe` (GNU Radio 3.10.12.0).
+- [x] **Core Modem & Sync Blocks**: `digital.constellation_qpsk()`, RRC filters (`sps=4`, `alpha=0.35`, `ntaps=45`), `digital.symbol_sync_cc` (`TED_GARDNER`, `IR_MMSE_8TAP`), `digital.costas_loop_cc` (order 4), and `diff_encoder_bb` / `diff_decoder_bb` (for 90-degree phase ambiguity resolution).
+- [x] **GATE-2 Framing Integration (Tx & Rx)**:
+  - Removed standalone `multiply_const(127)` / `float_to_char` (8-bit, 16 kHz) path and wired `wavfile_source` (`48000 Hz`) -> `epy_block_packetizer` (104 bytes/packet) -> `packed_to_unpacked_bb(2)` -> QPSK -> `unpacked_to_packed_bb(2)` -> `epy_block_depacketizer` -> `blocks.wavfile_sink` (`48000 Hz`, `FORMAT_PCM_16`).
+  - Upgraded `rf_qpsk_link_epy_block_depacketizer.py` with automatic 0..7 bit-shift preamble alignment (`0xAC62AC62`) so no hardcoded `Delay` block is needed.
+- [x] **AWGN Baseline & Audio Verification**:
+  - Bypassed/separated `selective_fading_model` (GATE-4) and `linear_equalizer` CMA (GATE-5) from the GATE-3 AWGN baseline.
+  - Verified `rx_rf_qpsk_48k.wav` (`287,852 bytes`, `48000 Hz`, 16-bit PCM): `99.93%` sample recovery (`143,904 / 144,000`), correlation = `0.999937`, SNR = `38.97 dB`.
 
 ### Required Fixes `[TODO]`
-- [ ] **Deliverable Naming**: Save `QPSK.grc` as `rf_qpsk_link.grc` and compile to `rf_qpsk_link.py` via `grcc.exe`.
-- [ ] **GATE-2 Framing Integration (Tx & Rx)**:
-  - Remove standalone `multiply_const(127)` -> `float_to_char` (8-bit, `audio_rate = 16000`) and `diff_encoder_bb` / `diff_decoder_bb`.
-  - Connect Tx: `wavfile_source` (`48000 Hz`) -> `epy_block_packetizer` (GATE-2, 104 bytes/packet) -> bit unpacking -> FEC / QPSK.
-  - Connect Rx: FEC / QPSK -> bit packing -> `epy_block_depacketizer` (GATE-2) -> `blocks.wavfile_sink` (`48000 Hz`, `FORMAT_PCM_16`).
 - [ ] **Forward Error Correction (FEC)**:
   - Add `fec.cc_encoder_make` (Tx) and `fec.cc_decoder_make` (Rx) with `K=7`, `rate=2` (`R=1/2`), polynomials `[0o171, 0o133]`.
-- [ ] **Block Configuration & Scope Alignment**:
-  - Fix `digital.symbol_sync_cc` constellation parameter from `digital.constellation_bpsk().base()` to `qpsk_const`.
-  - Add `blocks.wavfile_sink` (`48000 Hz`, `FORMAT_PCM_16`) as primary audio output (avoid relying solely on `audio.sink`, which fails on Windows with `open_waveout_device() failed`).
-  - Defer/bypass `channels.selective_fading_model` (GATE-4) and `digital.linear_equalizer` with CMA (GATE-5 requires LMS) from the GATE-3 AWGN baseline so timing & phase lock can be verified cleanly on AWGN first (`Eb/N0 >= 8 dB`).
+  - Update `sym_rate` to `832000` (`samp_rate = 3328000`) to account for the `R=1/2` code rate and re-verify `rx_rf_qpsk_48k.wav` recovery.
+  - *(Note: `digital.symbol_sync_cc` hides the constellation field in GRC when `TED_GARDNER` is selected because Gardner is non-data-aided; no change needed there.)*
 
 ---
 
